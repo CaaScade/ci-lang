@@ -1,0 +1,17 @@
+pod:
+  name: pipeline-controller
+  containers:
+  - name: ci-lang
+    image: docker
+    command: ['docker', 'run', '-p', '80:8000', 'nginx:latest']
+    env:
+    - DOCKER_HOST=tcp://localhost:2375
+  - name: dind
+    image: docker:dind
+    privileged: true
+    volume:
+    - mount: /var/lib/docker
+      store: docker-graph-storage
+  volumes:
+    docker-graph-storage:
+      vol_type: empty_dir

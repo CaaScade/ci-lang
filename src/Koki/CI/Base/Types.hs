@@ -22,8 +22,13 @@ data GitHubMerge = GitHubMerge
 data AccessRule
 data User
 
+-- class KubeResource
+
 data KubeSecret
 data KubeConfigMap
+data KubeVolume
+data KubeService
+data KubePod
 
 -- class File file where
 
@@ -40,8 +45,10 @@ data SecretUsernamePassword
 data SecretKey
 
 type Revision = Text
+{-
 class CloneRepository repo where
   clone :: Secret -> repo -> Revision -> Pipeline Directory
+-}
 
 -- CloneRepository types
 data GitHubRepository
@@ -49,8 +56,10 @@ data BitbucketRepository
 data GitRepository
 data MercurialRepository
 
+{-
 class PublishRepository repo where
   publish :: Secret -> NormalFile -> Pipeline ()
+-}
 
 -- PublishRepository types
 data DockerHub
@@ -59,4 +68,15 @@ data DockerHub
 
 {-
 TODO: Represent `Property`?
+-}
+
+{-
+Pipeline Input Types:
+
+GitHubPullRequest, GitHubMerge
+User
+KubeSecret, KubeConfigMap, KubeVolume, KubeService, KubePod
+NormalFile, Directory
+Secret
+Revision, CloneRepository, PublishRepository
 -}

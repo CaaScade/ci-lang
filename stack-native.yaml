@@ -1,0 +1,10 @@
+resolver: lts-10.2
+packages:
+- .
+
+docker:
+  enable: true
+image:
+  container:
+    base: "ublubu/stackbase"
+    name: "ublubu/stackapp"

@@ -1,0 +1,21 @@
+pod:
+  name: pipeline-controller
+  containers:
+  - name: ci-lang
+    image: ublubu/stackapp
+    wd: /opt/app
+    command:
+    - ci-lang-exe
+    env:
+    - DOCKER_HOST=http://localhost:2375
+    pull: always
+  - name: dind
+    image: docker:dind
+    privileged: true
+    volume:
+    - mount: /var/lib/docker
+      store: docker-graph-storage
+  termination_grace_period: 10
+  volumes:
+    docker-graph-storage:
+      vol_type: empty_dir
