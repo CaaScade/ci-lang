@@ -3,11 +3,12 @@
 
 module Main where
 
-import Import
+import           Import
 
-import Koki.CI.Docker
-import System.Environment (lookupEnv)
-import GHC.IO.Handle (hFlush)
+import           Koki.CI.App
+import           Koki.CI.Docker
+import           Koki.CI.Util
+import           System.Environment (lookupEnv)
 
 main :: IO ()
 main = do
@@ -19,20 +20,21 @@ dockerMain = do
   mDockerURL <- lookupEnv "DOCKER_HOST"
   let dockerURL = maybe "http://localhost:2375" pack mDockerURL
   putFlush $ "DOCKER_HOST=" <> dockerURL
-  runEDockerT dockerURL script
+  env <- printingAppEnv $ DockerBaseURL dockerURL
+  printFlush =<< runAppM env script
 
-script :: EDockerT IO ()
+script :: AppM ()
 script = do
   putFlush "check if available"
-  untilDockerAvailable
+  liftDocker untilDockerAvailable
   putFlush "pull container"
-  pullNginxContainer
+  liftDocker pullNginxContainer
   putFlush "create container"
-  cid <- untilDockerSucceeds createNginxContainer
+  cid <- liftDocker $ untilDockerSucceeds createNginxContainer
   putFlush $ "start " <> tshow cid
-  startDockerContainer cid
+  liftDocker $ startDockerContainer cid
   putFlush $ "wait for " <> tshow cid
-  code <- waitDockerContainer cid
+  code <- liftDocker $ waitDockerContainer cid
   putFlush $ tshow code
 
 printloop :: IO ()
@@ -40,6 +42,3 @@ printloop = do
   putFlush "loopy loop"
   threadDelay 2000000
   printloop
-
-putFlush :: MonadIO m => Text -> m ()
-putFlush msg = liftIO (putStrLn msg >> hFlush stdout)

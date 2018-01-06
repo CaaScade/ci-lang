@@ -14,14 +14,11 @@ import           System.Exit         (ExitCode)
 
 type EDockerT m a = ExceptT DockerError (DockerT m) a
 
-runEDockerT :: (MonadMask m, MonadIO m) => URL -> EDockerT m a -> m a
-runEDockerT baseURL action = do
-  mngr <- liftIO $ newManager dockerManagerSettings
-  let h = httpHandler mngr
-  let opts = defaultClientOpts { baseUrl = baseURL }
-  r <- runDockerT (opts, h) . runExceptT $ action
-  case r of Left e  -> error $ show e
-            Right x -> return x
+data ContainerJob = ContainerJob
+  { _cjContainerName :: Text
+  , _cjContainerTag :: Tag
+  , _cjWorkspaceBind :: Bind
+  }
 
 createNginxContainer :: EDockerT IO ContainerID
 createNginxContainer = ExceptT $ createContainer opts (Just "myNginxContainer")
@@ -59,27 +56,3 @@ untilDockerSucceeds_ action = do
       liftIO $ hFlush stdout
       untilDockerSucceeds_ action
     Right v -> return v
-
-dockerManagerSettings :: ManagerSettings
-dockerManagerSettings =
-  defaultManagerSettings { managerModifyRequest = logRequest
-                         , managerModifyResponse = logResponse
-                         }
-  where logRequest request = do
-          print request
-          hFlush stdout
-          return request
-        logResponse response_ = do
-          reconsumed <- newIORef False
-          let wholeResponse = fmap f response_
-          response <- sequence wholeResponse
-          print response
-          hFlush stdout
-          let returnOnce body = do
-                wasReconsumed <- readIORef reconsumed
-                if wasReconsumed then return mempty
-                else writeIORef reconsumed True >> return body
-          return $ fmap returnOnce response
-        f bodyreader = do
-          chunks <- brConsume bodyreader
-          return $ mconcat chunks

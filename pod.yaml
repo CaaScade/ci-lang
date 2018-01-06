@@ -9,6 +9,9 @@ pod:
     env:
     - DOCKER_HOST=http://localhost:2375
     pull: always
+    volume:
+    - mount: /workspace
+      store: workspace
   - name: dind
     image: docker:dind
     privileged: true
@@ -18,4 +21,6 @@ pod:
   termination_grace_period: 10
   volumes:
     docker-graph-storage:
+      vol_type: empty_dir
+    workspace:
       vol_type: empty_dir
