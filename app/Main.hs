@@ -33,6 +33,11 @@ script = do
       { _cjImageName = "nginx"
       , _cjImageTag = ImageTag "latest"
       , _cjName = Nothing
+      , _cjWorkspace =
+          Workspace
+          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace"
+          , _wJobDir = Directory "/workspace"
+          }
       }
 
 printloop :: IO ()

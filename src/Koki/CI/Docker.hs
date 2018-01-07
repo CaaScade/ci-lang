@@ -8,6 +8,7 @@ module Koki.CI.Docker where
 import           Import
 
 import           Conduit
+import qualified Data.Text as T
 import           Docker.Client       hiding (stdout)
 import           GHC.IO.Handle       (hFlush)
 import           Network.HTTP.Client
@@ -18,7 +19,17 @@ type EDockerT m a = ExceptT DockerError (DockerT m) a
 
 containerJobCreateOpts :: ContainerJob -> CreateOpts
 containerJobCreateOpts job =
-  defaultCreateOpts . unImageTaggedName $ containerJobImageTaggedName job
+  bindWorkspace $ defaultCreateOpts imageName
+  where bindWorkspace = addBind (workspaceBindMount $ _cjWorkspace job)
+        imageName = unImageTaggedName $ containerJobImageTaggedName job
+
+workspaceBindMount :: Workspace -> Bind
+workspaceBindMount Workspace {..} =
+  Bind
+  { hostSrc = T.pack $ unDirectory _wHostDir
+  , containerDest = T.pack $ unDirectory _wJobDir
+  , volumePermission = Nothing
+  }
 
 createJobContainer :: ContainerJob -> EDockerT IO ContainerID
 createJobContainer job@ContainerJob{..} =
