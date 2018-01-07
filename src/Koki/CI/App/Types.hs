@@ -1,13 +1,16 @@
-{-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs               #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Koki.CI.App.Types where
 
 import           Import
 
-import qualified Docker.Client       as D
-import           Koki.CI.Docker
+import qualified Docker.Client        as D
+import qualified Koki.CI.Docker       as KD
+import           Koki.CI.Docker.Types
 import           Network.HTTP.Client
 
 newtype DockerBaseURL = DockerBaseURL Text deriving Show
@@ -25,9 +28,25 @@ data AppError
   | SimpleError Text
   deriving (Show)
 
-type AppM a = ReaderT AppEnv (ExceptT AppError IO) a
+newtype App a = App
+  { unApp :: ReaderT AppEnv (ExceptT AppError IO) a
+  } deriving ( Functor
+             , Applicative
+             , Monad
+             , MonadIO
+             , MonadReader AppEnv
+             , MonadError AppError
+             )
 
-liftDocker :: forall a. EDockerT IO a -> AppM a
+instance DockerJobClient App where
+
+  runContainerJob :: ContainerJob -> App ExitCode
+  runContainerJob job = liftDocker $ KD.runContainerJob job
+
+  untilDockerAvailable :: App ()
+  untilDockerAvailable = liftDocker KD.untilDockerAvailable
+
+liftDocker :: forall a. KD.EDockerT IO a -> App a
 liftDocker action = do
   env <- ask
   let handler = _aeHttpHandler env
@@ -36,11 +55,11 @@ liftDocker action = do
       ranDocker =
         fmap (first DockerError) . D.runDockerT (opts, handler) . runExceptT $
         action
-  ReaderT . const . ExceptT $ ranDocker
+  App . ReaderT . const . ExceptT $ ranDocker
 
 dockerOptsForBaseURL :: DockerBaseURL -> D.DockerClientOpts
 dockerOptsForBaseURL (DockerBaseURL baseURL) =
   D.defaultClientOpts { D.baseUrl = baseURL }
 
-runAppM :: AppEnv -> AppM a -> IO (Either AppError a)
-runAppM env action = runExceptT $ runReaderT action env
+runApp :: AppEnv -> App a -> IO (Either AppError a)
+runApp env action = runExceptT $ runReaderT (unApp action) env

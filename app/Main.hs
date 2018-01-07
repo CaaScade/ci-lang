@@ -6,7 +6,7 @@ module Main where
 import           Import
 
 import           Koki.CI.App
-import           Koki.CI.Docker
+import           Koki.CI.Docker.Types
 import           Koki.CI.Util
 import           System.Environment (lookupEnv)
 
@@ -21,21 +21,19 @@ dockerMain = do
   let dockerURL = maybe "http://localhost:2375" pack mDockerURL
   putFlush $ "DOCKER_HOST=" <> dockerURL
   env <- printingAppEnv $ DockerBaseURL dockerURL
-  printFlush =<< runAppM env script
+  printFlush =<< runApp env script
 
-script :: AppM ()
+script :: App ()
 script = do
-  putFlush "check if available"
-  liftDocker untilDockerAvailable
-  putFlush "pull container"
-  liftDocker pullNginxContainer
-  putFlush "create container"
-  cid <- liftDocker $ untilDockerSucceeds createNginxContainer
-  putFlush $ "start " <> tshow cid
-  liftDocker $ startDockerContainer cid
-  putFlush $ "wait for " <> tshow cid
-  code <- liftDocker $ waitDockerContainer cid
-  putFlush $ tshow code
+  untilDockerAvailable
+  printFlush =<< runContainerJob job
+  where
+    job =
+      ContainerJob
+      { _cjImageName = "nginx"
+      , _cjImageTag = ImageTag "latest"
+      , _cjName = Nothing
+      }
 
 printloop :: IO ()
 printloop = do

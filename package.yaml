@@ -20,15 +20,29 @@ synopsis:            Short description of your package
 description:         Please see the README on Github at <https://github.com/caascade/ci-lang#readme>
 
 dependencies:
+- async
 - base >= 4.7 && < 5
+- bytestring
 - classy-prelude
-- docker
-- mtl
-- transformers
-- text
-- http-client
 - conduit
 - conduit-combinators
+- containers
+- deepseq
+- directory
+- docker
+- filepath
+- ghc-prim
+- http-client
+- lens
+- mtl
+- optparse-applicative
+- process
+- stm
+- text
+- transformers
+- unix
+- unordered-containers
+- vector
 
 library:
   source-dirs: src
