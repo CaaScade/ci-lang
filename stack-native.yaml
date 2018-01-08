@@ -1,6 +1,7 @@
 resolver: lts-10.2
 packages:
 - .
+- ./lib/docker-hs
 
 docker:
   enable: true
