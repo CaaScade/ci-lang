@@ -19,14 +19,22 @@ type EDockerT m a = ExceptT DockerError (DockerT m) a
 
 containerJobCreateOpts :: ContainerJob -> CreateOpts
 containerJobCreateOpts job@ContainerJob {..} =
-  setCommands . bindWorkspace $ defaultCreateOpts imageName
+  setContainerConfig . bindWorkspace $ defaultCreateOpts imageName
   where
     bindWorkspace = addBind (workspaceBindMount _cjWorkspace)
-    setCommands opts =
-      opts {containerConfig = cc {cmd = jobCommands _cjCommands}}
+    setContainerConfig opts =
+      opts
+      { containerConfig =
+          cc
+          { cmd = jobCommands _cjCommands
+          , workingDir = Just jobDir
+          , entrypoint = Entrypoint [""]
+          }
+      }
       where
         cc = containerConfig opts
     imageName = unImageTaggedName $ containerJobImageTaggedName job
+    jobDir = unDirectory $ _wJobDir _cjWorkspace
 
 workspaceBindMount :: Workspace -> Bind
 workspaceBindMount Workspace {..} =

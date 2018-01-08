@@ -26,19 +26,45 @@ dockerMain = do
 script :: App ()
 script = do
   untilDockerAvailable
-  printFlush =<< runContainerJob job
+  printFlush =<< runContainerJob prepareWorkspaceJob
+  printFlush =<< runContainerJob cloneJob
+  printFlush =<< runContainerJob buildJob
   where
-    job =
+    prepareWorkspaceJob =
       ContainerJob
-      { _cjImageName = "ubuntu"
-      , _cjImageTag = ImageTag "16.04"
+      { _cjImageName = "alpine"
+      , _cjImageTag = ImageTag "latest"
       , _cjName = Nothing
       , _cjWorkspace =
           Workspace
           { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace"
           , _wJobDir = Directory "/workspace"
           }
-      , _cjCommands = [ "touch /workspace/a", "touch /workspace/b" ]
+      , _cjCommands = [ "rm -rf *" ]
+      }
+    cloneJob =
+      ContainerJob
+      { _cjImageName = "alpine/git"
+      , _cjImageTag = ImageTag "latest"
+      , _cjName = Nothing
+      , _cjWorkspace =
+          Workspace
+          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace"
+          , _wJobDir = Directory "/workspace"
+          }
+      , _cjCommands = [ "git clone https://github.com/koki/short.git"]
+      }
+    buildJob =
+      ContainerJob
+      { _cjImageName = "golang"
+      , _cjImageTag = ImageTag "latest"
+      , _cjName = Nothing
+      , _cjWorkspace =
+          Workspace
+          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace/short"
+          , _wJobDir = Directory "/go/src/github.com/koki/short"
+          }
+      , _cjCommands = [ "./scripts/test.sh", "./scripts/build.sh" ]
       }
 
 printloop :: IO ()
