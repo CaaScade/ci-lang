@@ -5,11 +5,17 @@
 module Koki.CI.Docker.Types
   ( module Koki.CI.Docker.Types
   , ExitCode(..)
+  , ResponseTimeout
+  , responseTimeoutDefault
+  , responseTimeoutNone
+  , responseTimeoutMicro
   ) where
 
 import           Import
 
-import           System.Exit   (ExitCode (..))
+import           Network.HTTP.Client (ResponseTimeout, responseTimeoutDefault,
+                                      responseTimeoutMicro, responseTimeoutNone)
+import           System.Exit         (ExitCode (..))
 
 newtype ImageTaggedName = ImageTaggedName { unImageTaggedName :: Text } deriving (Show, Eq)
 newtype ImageTag = ImageTag { unImageTag :: Text } deriving (Show, Eq)
@@ -19,7 +25,8 @@ data ContainerJob = ContainerJob
   , _cjImageTag  :: ImageTag -- ^ the tag to pull
   , _cjName      :: Maybe Text -- ^ the name of the container
   , _cjWorkspace :: Workspace -- ^ the container's workspace
-  , _cjCommands :: [Text] -- ^ commands to run in the container
+  , _cjCommands  :: [Text] -- ^ commands to run in the container
+  , _cjTimeout :: ResponseTimeout -- ^ how long to wait for the job to finish
   } deriving (Show, Eq)
 
 {- |
@@ -37,7 +44,7 @@ TODO: Don't assume single workspace dir.
 -}
 data Workspace = Workspace
   { _wHostDir :: Directory
-  , _wJobDir :: Directory } deriving (Show, Eq)
+  , _wJobDir  :: Directory } deriving (Show, Eq)
 newtype Directory = Directory { unDirectory :: FilePath } deriving (Show, Eq)
 
 -- | Typeclass for running jobs in Docker.
@@ -48,3 +55,9 @@ class Monad m => DockerJobClient m where
 
 containerJobImageTaggedName :: ContainerJob -> ImageTaggedName
 containerJobImageTaggedName ContainerJob{..} = ImageTaggedName $ _cjImageName <> ":" <> unImageTag _cjImageTag
+
+responseTimeoutMinutes :: Int -> ResponseTimeout
+responseTimeoutMinutes x = responseTimeoutSeconds (60 * x)
+
+responseTimeoutSeconds :: Int -> ResponseTimeout
+responseTimeoutSeconds x = responseTimeoutMicro (1000000 * x)

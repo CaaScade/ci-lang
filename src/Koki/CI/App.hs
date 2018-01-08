@@ -8,7 +8,6 @@ module Koki.CI.App
 
 import           Import
 
-import qualified Docker.Client       as D
 import           Koki.CI.App.Types
 import           Koki.CI.Util
 import           Network.HTTP.Client
@@ -35,17 +34,12 @@ printResponse response_ = do
       chunks <- brConsume bodyreader
       return $ mconcat chunks
 
-printingAppEnv :: DockerBaseURL -> IO AppEnv
-printingAppEnv baseURL = do
-  manager <-
-    newManager
+printingAppEnv :: DockerBaseURL -> AppEnv
+printingAppEnv baseURL =
+  AppEnv {_aeHttpManagerSettings = managerSettings, _aeDockerBaseURL = baseURL}
+  where
+    managerSettings =
       defaultManagerSettings
       { managerModifyRequest = printRequest
       , managerModifyResponse = printResponse
       }
-  return
-    AppEnv
-    { _aeHttpManager = manager
-    , _aeHttpHandler = D.httpHandler manager
-    , _aeDockerOpts = dockerOptsForBaseURL baseURL
-    }

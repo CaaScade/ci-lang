@@ -8,6 +8,7 @@ pod:
     - ci-lang-exe
     env:
     - DOCKER_HOST=http://localhost:2375
+    - CI_WORKSPACE_DIR=/workspace
     pull: always
     volume:
     - mount: /workspace

@@ -8,7 +8,9 @@ import           Import
 import           Koki.CI.App
 import           Koki.CI.Docker.Types
 import           Koki.CI.Util
-import           System.Environment (lookupEnv)
+import           System.Directory     (createDirectoryIfMissing)
+import           System.Environment   (lookupEnv)
+import           System.FilePath      ((</>))
 
 main :: IO ()
 main = do
@@ -20,11 +22,14 @@ dockerMain = do
   mDockerURL <- lookupEnv "DOCKER_HOST"
   let dockerURL = maybe "http://localhost:2375" pack mDockerURL
   putFlush $ "DOCKER_HOST=" <> dockerURL
-  env <- printingAppEnv $ DockerBaseURL dockerURL
-  printFlush =<< runApp env script
+  mWorkspaceDir <- lookupEnv "CI_WORKSPACE_DIR"
+  let workspaceDir = fromMaybe "/home/kynan/workspace/ci-lang/ci-workspace" mWorkspaceDir
+      env = printingAppEnv $ DockerBaseURL dockerURL
+  createDirectoryIfMissing True workspaceDir
+  printFlush =<< runApp env (script workspaceDir)
 
-script :: App ()
-script = do
+script :: FilePath -> App ()
+script workspaceDir = do
   untilDockerAvailable
   printFlush =<< runContainerJob prepareWorkspaceJob
   printFlush =<< runContainerJob cloneJob
@@ -37,10 +42,11 @@ script = do
       , _cjName = Nothing
       , _cjWorkspace =
           Workspace
-          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace"
+          { _wHostDir = Directory workspaceDir
           , _wJobDir = Directory "/workspace"
           }
       , _cjCommands = [ "rm -rf *" ]
+      , _cjTimeout = responseTimeoutDefault
       }
     cloneJob =
       ContainerJob
@@ -49,10 +55,11 @@ script = do
       , _cjName = Nothing
       , _cjWorkspace =
           Workspace
-          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace"
+          { _wHostDir = Directory workspaceDir
           , _wJobDir = Directory "/workspace"
           }
       , _cjCommands = [ "git clone https://github.com/koki/short.git"]
+      , _cjTimeout = responseTimeoutMinutes 1
       }
     buildJob =
       ContainerJob
@@ -61,10 +68,11 @@ script = do
       , _cjName = Nothing
       , _cjWorkspace =
           Workspace
-          { _wHostDir = Directory "/home/kynan/workspace/scratch/ci-workspace/short"
+          { _wHostDir = Directory $ workspaceDir </> "short"
           , _wJobDir = Directory "/go/src/github.com/koki/short"
           }
       , _cjCommands = [ "./scripts/test.sh", "./scripts/build.sh" ]
+      , _cjTimeout = responseTimeoutMinutes 5
       }
 
 printloop :: IO ()

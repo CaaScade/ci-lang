@@ -12,7 +12,6 @@ import qualified Data.Text            as T
 import           Docker.Client        hiding (stdout)
 import           GHC.IO.Handle        (hFlush)
 import           Koki.CI.Docker.Types
-import           Network.HTTP.Client
 import           System.Exit          (ExitCode)
 
 type EDockerT m a = ExceptT DockerError (DockerT m) a
@@ -55,13 +54,6 @@ pullJobImage :: ContainerJob -> EDockerT IO ()
 pullJobImage ContainerJob{..} =
   ExceptT $ pullImage _cjImageName tag printC -- TODO: something other than printC
   where tag = unImageTag _cjImageTag
-
-runContainerJob :: ContainerJob -> EDockerT IO ExitCode
-runContainerJob job = do
-  pullJobImage job
-  cid <- createJobContainer job
-  ExceptT $ startContainer defaultStartOpts cid
-  ExceptT $ waitContainer cid
 
 startDockerContainer :: ContainerID -> EDockerT IO ()
 startDockerContainer = ExceptT . startContainer defaultStartOpts

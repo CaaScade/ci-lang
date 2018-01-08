@@ -18,9 +18,8 @@ defaultDockerBaseURL :: DockerBaseURL
 defaultDockerBaseURL = DockerBaseURL "http://localhost:2375"
 
 data AppEnv = AppEnv
-  { _aeHttpManager :: Manager
-  , _aeHttpHandler :: D.HttpHandler IO
-  , _aeDockerOpts  :: D.DockerClientOpts
+  { _aeHttpManagerSettings :: ManagerSettings
+  , _aeDockerBaseURL       :: DockerBaseURL
   }
 
 data AppError
@@ -39,17 +38,26 @@ newtype App a = App
              )
 
 instance DockerJobClient App where
-
   runContainerJob :: ContainerJob -> App ExitCode
-  runContainerJob job = liftDocker $ KD.runContainerJob job
-
+  runContainerJob job = do
+    liftDocker' $ KD.pullJobImage job
+    cid <- liftDocker' $ KD.createJobContainer job
+    liftDocker' $ KD.startDockerContainer cid
+    liftDocker timeout $ KD.waitDockerContainer cid
+    where
+      timeout = _cjTimeout job
   untilDockerAvailable :: App ()
-  untilDockerAvailable = liftDocker KD.untilDockerAvailable
+  untilDockerAvailable = liftDocker' KD.untilDockerAvailable
 
-liftDocker :: forall a. KD.EDockerT IO a -> App a
-liftDocker action = do
-  env <- ask
-  let handler = _aeHttpHandler env
+liftDocker' :: forall a. KD.EDockerT IO a -> App a
+liftDocker' = liftDocker responseTimeoutDefault
+
+liftDocker :: forall a. ResponseTimeout -> KD.EDockerT IO a -> App a
+liftDocker timeout action = do
+  env <- App ask
+  let managerSettings = (_aeHttpManagerSettings env) { managerResponseTimeout = timeout }
+  manager <- App . liftIO $ newManager managerSettings
+  let handler = D.httpHandler manager
       opts = _aeDockerOpts env
       ranDocker :: IO (Either AppError a)
       ranDocker =
@@ -60,6 +68,10 @@ liftDocker action = do
 dockerOptsForBaseURL :: DockerBaseURL -> D.DockerClientOpts
 dockerOptsForBaseURL (DockerBaseURL baseURL) =
   D.defaultClientOpts { D.baseUrl = baseURL }
+
+_aeDockerOpts :: AppEnv -> D.DockerClientOpts
+_aeDockerOpts env =
+  D.defaultClientOpts {D.baseUrl = coerce $ _aeDockerBaseURL env}
 
 runApp :: AppEnv -> App a -> IO (Either AppError a)
 runApp env action = runExceptT $ runReaderT (unApp action) env
