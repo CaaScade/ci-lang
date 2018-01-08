@@ -1,27 +1,32 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Koki.CI.Docker where
 
 import           Import
 
 import           Conduit
-import qualified Data.Text as T
-import           Docker.Client       hiding (stdout)
-import           GHC.IO.Handle       (hFlush)
+import qualified Data.Text            as T
+import           Docker.Client        hiding (stdout)
+import           GHC.IO.Handle        (hFlush)
+import           Koki.CI.Docker.Types
 import           Network.HTTP.Client
-import           System.Exit         (ExitCode)
-import Koki.CI.Docker.Types
+import           System.Exit          (ExitCode)
 
 type EDockerT m a = ExceptT DockerError (DockerT m) a
 
 containerJobCreateOpts :: ContainerJob -> CreateOpts
-containerJobCreateOpts job =
-  bindWorkspace $ defaultCreateOpts imageName
-  where bindWorkspace = addBind (workspaceBindMount $ _cjWorkspace job)
-        imageName = unImageTaggedName $ containerJobImageTaggedName job
+containerJobCreateOpts job@ContainerJob {..} =
+  setCommands . bindWorkspace $ defaultCreateOpts imageName
+  where
+    bindWorkspace = addBind (workspaceBindMount _cjWorkspace)
+    setCommands opts =
+      opts {containerConfig = cc {cmd = jobCommands _cjCommands}}
+      where
+        cc = containerConfig opts
+    imageName = unImageTaggedName $ containerJobImageTaggedName job
 
 workspaceBindMount :: Workspace -> Bind
 workspaceBindMount Workspace {..} =
@@ -30,6 +35,9 @@ workspaceBindMount Workspace {..} =
   , containerDest = T.pack $ unDirectory _wJobDir
   , volumePermission = Nothing
   }
+
+jobCommands :: [Text] -> [Text]
+jobCommands script = ["sh", "-c", T.unlines ("set -e":script)]
 
 createJobContainer :: ContainerJob -> EDockerT IO ContainerID
 createJobContainer job@ContainerJob{..} =

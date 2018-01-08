@@ -14,12 +14,12 @@ import           System.Exit   (ExitCode (..))
 newtype ImageTaggedName = ImageTaggedName { unImageTaggedName :: Text } deriving (Show, Eq)
 newtype ImageTag = ImageTag { unImageTag :: Text } deriving (Show, Eq)
 
--- TODO: Implementation-agnostic types here.
 data ContainerJob = ContainerJob
-  { _cjImageName :: Text
-  , _cjImageTag  :: ImageTag
-  , _cjName      :: Maybe Text
-  , _cjWorkspace :: Workspace
+  { _cjImageName :: Text -- ^ the name of the image
+  , _cjImageTag  :: ImageTag -- ^ the tag to pull
+  , _cjName      :: Maybe Text -- ^ the name of the container
+  , _cjWorkspace :: Workspace -- ^ the container's workspace
+  , _cjCommands :: [Text] -- ^ commands to run in the container
   } deriving (Show, Eq)
 
 {- |
