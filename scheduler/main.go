@@ -9,7 +9,8 @@ import (
 	serr "github.com/koki/structurederrors"
 	"github.com/sirupsen/logrus"
 
-	_ "k8s.io/client-go/kubernetes" // using this later
+	l "github.com/koki/ci-lang/scheduler/log"
+	p "github.com/koki/ci-lang/scheduler/pipelines"
 )
 
 // WebhookSecretVar is the name of an environment variable.
@@ -18,12 +19,13 @@ const WebhookSecretVar = "GITHUB_WEBHOOK_SECRET"
 
 // Config contains the global settings for the webhook server.
 type Config struct {
-	WebhookSecret []byte
+	WebhookSecret    []byte
+	PipelinesContext *p.Context
 }
 
 // HandleWebhook implements the GitHub Webhook receiver endpoint.
 func (c *Config) HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	log := StartLog()
+	log := l.StartLog()
 	defer log.Write()
 
 	log["request_url"] = r.URL.String()
@@ -48,7 +50,7 @@ func (c *Config) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	switch event := event.(type) {
 	case *github.PushEvent:
 		log["push_event"] = event
-		HandlePushEvent(event, w, log)
+		c.HandlePushEvent(event, w, log)
 	case *github.PullRequestEvent:
 		log["pull_event"] = event
 		HandlePullEvent(event, w, log)
@@ -59,26 +61,26 @@ func (c *Config) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandlePushEvent triggers a pipeline for a GitHub push event.
-func HandlePushEvent(event *github.PushEvent, w http.ResponseWriter, log Log) {
-	bb, err := json.Marshal(map[string]interface{}{"result": "we did it!"})
-	if err != nil {
-		log["error"] = serr.ContextualizeErrorf(err, "serializing result of handling push event")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func (c *Config) HandlePushEvent(event *github.PushEvent, w http.ResponseWriter, log l.Log) {
+	pod := c.PipelinesContext.BuildPipelinePod()
+	success := c.PipelinesContext.RunPipeline(&pod, &l.Default)
 
-	header := w.Header()
-	header.Set("Content-Type", "application/json")
-	_, err = w.Write(bb)
-	if err != nil {
-		log["error"] = serr.ContextualizeErrorf(err, "writing response")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if success {
+		header := w.Header()
+		header.Set("Content-Type", "application/json")
+		_, err := w.Write([]byte(`{"result": "success!"}`))
+		if err != nil {
+			log["error"] = serr.ContextualizeErrorf(err, "writing response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "pipeline failed", http.StatusBadRequest)
 	}
 }
 
 // HandlePullEvent triggers a pipeline for a GitHub pull request event.
-func HandlePullEvent(event *github.PullRequestEvent, w http.ResponseWriter, log Log) {
+func HandlePullEvent(event *github.PullRequestEvent, w http.ResponseWriter, log l.Log) {
 	bb, err := json.Marshal(map[string]interface{}{"result": "we did it!"})
 	if err != nil {
 		log["error"] = serr.ContextualizeErrorf(err, "serializing result of handling push event")
@@ -96,34 +98,26 @@ func HandlePullEvent(event *github.PullRequestEvent, w http.ResponseWriter, log 
 	}
 }
 
-func main() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+func ReadEnv() *Config {
 	webhookSecret := os.Getenv(WebhookSecretVar)
 	if len(webhookSecret) == 0 {
 		logrus.Fatalf("%s is missing", WebhookSecretVar)
 	}
 
-	config := &Config{
-		WebhookSecret: []byte(webhookSecret),
+	pContext := p.ReadEnv().BuildContext()
+
+	return &Config{
+		WebhookSecret:    []byte(webhookSecret),
+		PipelinesContext: pContext,
 	}
+}
+
+func main() {
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	config := ReadEnv()
 
 	logrus.Println("server started")
 	http.HandleFunc("/webhook", config.HandleWebhook)
 
 	logrus.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-// Log is an unstructured log object used to generate JSON-formatted logs.
-// Information is added to the Log over the course of its lifetime until
-// its Write method is called (usually by a "defer" block).
-type Log map[string]interface{}
-
-// StartLog starts a new Log entry.
-func StartLog() Log {
-	return Log(map[string]interface{}{})
-}
-
-// Write actually commits the log entry (usually in a "defer" block).
-func (l *Log) Write() {
-	logrus.WithField("log", l).Info()
 }

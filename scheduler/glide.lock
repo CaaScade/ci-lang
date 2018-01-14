@@ -1,6 +1,10 @@
-hash: 5e5be2b4b4dc0989e144e288ae289dfbe8214f69ca336dfc410aa405a44100ea
-updated: 2018-01-07T22:57:33.889778953-08:00
+hash: ac4b71167d15132aefcb1f2ae93804d323a3282caf72e16196fb2f918acc44aa
+updated: 2018-01-08T15:18:11.683122566-08:00
 imports:
+- name: github.com/davecgh/go-spew
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  subpackages:
+  - spew
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
@@ -52,8 +56,16 @@ imports:
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
   - diskcache
+- name: github.com/hashicorp/golang-lru
+  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  subpackages:
+  - simplelru
+- name: github.com/howeyc/gopass
+  version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
+- name: github.com/imdario/mergo
+  version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
-  version: 13f86432b882000a51c6e610c620974462691a97
+  version: 36b14963da70d11297d313183d7e6388c8510e1e
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/koki/json
@@ -76,6 +88,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/satori/go.uuid
+  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
@@ -88,7 +102,6 @@ imports:
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
-  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
@@ -117,7 +130,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 3b9b65abe0aa9d995259dad1469ff3e1f18802c5
+  version: 11147472b7c934c474a2c484af3c0c5210b7a3af
   subpackages:
   - admissionregistration/v1alpha1
   - admissionregistration/v1beta1
@@ -149,19 +162,11 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 5250765d28a6a1e07c6f09fe814a4b58ad74cc11
+  version: 180eddb345a5be3a157cea1c624700ad5bd27b8f
   subpackages:
-  - pkg/api/equality
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
-  - pkg/api/testing
-  - pkg/api/testing/fuzzer
-  - pkg/api/testing/roundtrip
-  - pkg/apimachinery
-  - pkg/apimachinery/announced
-  - pkg/apimachinery/registered
-  - pkg/apis/meta/fuzzer
   - pkg/apis/meta/internalversion
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
@@ -185,27 +190,20 @@ imports:
   - pkg/util/diff
   - pkg/util/errors
   - pkg/util/framer
-  - pkg/util/httpstream
-  - pkg/util/httpstream/spdy
   - pkg/util/intstr
   - pkg/util/json
-  - pkg/util/mergepatch
   - pkg/util/net
-  - pkg/util/remotecommand
   - pkg/util/runtime
   - pkg/util/sets
-  - pkg/util/strategicpatch
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
-  - third_party/forked/golang/json
-  - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
-  version: 17dfc2579839ade675e779b6540fba06b3a57e0c
+  version: 78700dec6369ba22221b72770783300f143df150
   subpackages:
   - discovery
   - kubernetes
@@ -241,16 +239,24 @@ imports:
   - pkg/version
   - rest
   - rest/watch
+  - tools/auth
+  - tools/cache
+  - tools/clientcmd
   - tools/clientcmd/api
+  - tools/clientcmd/api/latest
+  - tools/clientcmd/api/v1
   - tools/metrics
+  - tools/pager
   - tools/reference
   - transport
+  - util/buffer
   - util/cert
   - util/flowcontrol
+  - util/homedir
   - util/integer
+  - util/workqueue
 - name: k8s.io/kube-openapi
   version: 39a7bf85c140f972372c2a0d1ee40adbf0c8bfe1
   subpackages:
   - pkg/common
-  - pkg/util/proto
 testImports: []

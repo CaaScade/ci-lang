@@ -19,6 +19,7 @@ pod:
     volume:
     - mount: /var/lib/docker
       store: docker-graph-storage
+  restart_policy: never
   termination_grace_period: 10
   volumes:
     docker-graph-storage:
