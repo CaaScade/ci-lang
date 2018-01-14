@@ -14,7 +14,6 @@ import           Koki.CI.Lang
 import qualified Koki.CI.Lang.Git     as G
 import           Koki.CI.Util
 import           Network.HTTP.Client
-import           System.Exit
 
 printRequest :: Request -> IO Request
 printRequest request = do
@@ -48,9 +47,14 @@ printingAppEnv baseURL =
       , managerModifyResponse = printResponse
       }
 
-getPipeline :: FilePath -> Text -> App Pipeline
-getPipeline workspaceDir repoName = do
-  result <- G.getPipeline workspaceDir repoName
+defaultAppEnv :: DockerBaseURL -> AppEnv
+defaultAppEnv baseURL =
+  AppEnv
+  {_aeHttpManagerSettings = defaultManagerSettings, _aeDockerBaseURL = baseURL}
+
+getPipeline :: FilePath -> App Pipeline
+getPipeline cloneDir = do
+  result <- G.getPipeline cloneDir
   case result of
     Left e         -> throwLang e
     Right pipeline -> return pipeline

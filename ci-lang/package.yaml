@@ -39,12 +39,15 @@ dependencies:
 - optparse-applicative
 - process
 - stm
+- tar
 - text
 - transformers
 - unix
 - unordered-containers
 - vector
+- wreq
 - yaml
+- zlib
 
 library:
   source-dirs: src

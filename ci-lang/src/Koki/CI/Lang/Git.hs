@@ -48,9 +48,9 @@ cloneJob workspaceDir GitRepo {..} revision =
   }
 
 pipelineFileDefaultName :: FilePath
-pipelineFileDefaultName = "ci.koki"
+pipelineFileDefaultName = "koki.yaml"
 
-getPipeline :: (MonadIO m) => FilePath -> Text -> m (Either ParseException Pipeline)
-getPipeline workspaceDir repoName = do
-  let pipelineFile = workspaceDir </> unpack repoName </> pipelineFileDefaultName
+getPipeline :: (MonadIO m) => FilePath -> m (Either ParseException Pipeline)
+getPipeline cloneDir = do
+  let pipelineFile = cloneDir </> pipelineFileDefaultName
   liftIO $ Y.decodeFileEither pipelineFile
