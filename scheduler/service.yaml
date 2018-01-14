@@ -1,0 +1,8 @@
+service:
+  name: pipeline-scheduler
+  labels:
+    app: pipeline-scheduler
+  selector:
+    app: pipeline-scheduler
+  port: 80:8080
+  type: load-balancer

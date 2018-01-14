@@ -1,0 +1,20 @@
+imports:
+- env: ./env.yaml
+deployment:
+  name: pipeline-scheduler
+  labels:
+    app: pipeline-scheduler
+  replicas: 1
+  selector:
+    app: pipeline-scheduler
+  affinity:
+  - anti_pod: app=pipeline-scheduler
+    topology: kubernetes.io/hostname
+  containers:
+  - image: ublubu/dummyscheduler
+    name: scheduler
+    pull: always
+    expose:
+    - 8080
+    env:
+    - GITHUB_WEBHOOK_SECRET=${env.github_webhook_secret}
