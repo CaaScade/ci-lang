@@ -1,6 +1,8 @@
 package log
 
 import (
+	"fmt"
+
 	serr "github.com/koki/structurederrors"
 	"github.com/sirupsen/logrus"
 )
@@ -50,6 +52,12 @@ func (l Log) Write() {
 func (l *Logger) FatalErr(err error, contextFormat string, contextArgs ...interface{}) {
 	log := StartLog()
 	log["error"] = serr.ContextualizeErrorf(err, contextFormat, contextArgs...).Error()
+	logrus.WithField("log", &log).Fatal()
+}
+
+func (l *Logger) Fatalf(contextFormat string, contextArgs ...interface{}) {
+	log := StartLog()
+	log["error"] = fmt.Errorf(contextFormat, contextArgs...).Error()
 	logrus.WithField("log", &log).Fatal()
 }
 

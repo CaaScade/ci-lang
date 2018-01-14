@@ -6,8 +6,6 @@ import (
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/satori/go.uuid"
-
 	l "github.com/koki/ci-lang/scheduler/log"
 )
 
@@ -57,8 +55,8 @@ func (c *Context) RunPipeline(pod *v1.Pod, logger *l.Logger) bool {
 	return podSuccess
 }
 
-func (c *Context) BuildPipelinePod() v1.Pod {
-	name := fmt.Sprintf("pipeline-%s", uuid.Must(uuid.NewV4()))
+func (c *Context) BuildPipelinePod(pipelineID string) v1.Pod {
+	name := fmt.Sprintf("pipeline-%s", pipelineID)
 	return PipelineControllerPod(c.Env.Namespace, name)
 }
 

@@ -25,10 +25,14 @@ type Env struct {
 
 // ReadEnv gets the environment variables for the k8s client.
 func ReadEnv() Env {
+	namespace := os.Getenv("NAMESPACE")
+	if len(namespace) == 0 {
+		l.Default.Fatalf("NAMESPACE is missing")
+	}
 	return Env{
 		MasterURL:  os.Getenv("K8S_MASTER_URL"),
 		KubeConfig: os.Getenv("KUBECONFIG"),
-		Namespace:  os.Getenv("NAMESPACE"),
+		Namespace:  namespace,
 	}
 }
 

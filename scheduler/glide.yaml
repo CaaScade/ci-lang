@@ -7,6 +7,7 @@ import:
 - package: github.com/koki/structurederrors
 - package: github.com/sirupsen/logrus
 - package: k8s.io/client-go
+  version: 78700dec6369ba22221b72770783300f143df150
   subpackages:
   - kubernetes
-  version: 78700dec6369ba22221b72770783300f143df150
+- package: golang.org/x/oauth2
