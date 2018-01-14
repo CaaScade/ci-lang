@@ -17,6 +17,8 @@ deployment:
     expose:
     - 8080
     env:
-    - GITHUB_WEBHOOK_SECRET=${env.github_webhook_secret}
-    - GITHUB_USER_ACCESS_TOKEN=${env.github_user_access_token}
-    - NAMESPACE=default
+    - GITHUB_CLIENT_SECRET=${env.github_client_secret}
+    - GITHUB_CLIENT_ID=${env.github_client_id}
+    - COOKIE_AUTH_KEY=${env.cookie_auth_key}
+    - CI_BASE_URL=${env.ci_base_url}
+    - NAMESPACE=${env.namespace}

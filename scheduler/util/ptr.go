@@ -49,3 +49,11 @@ func FromStringPtr(s *string) string {
 
 	return *s
 }
+
+func FromIntPtr(i *int) int {
+	if i == nil {
+		return 0
+	}
+
+	return *i
+}

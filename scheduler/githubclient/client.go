@@ -15,3 +15,11 @@ func ClientWithToken(userAccessToken string) *github.Client {
 	tc := oauth2.NewClient(ctx, ts)
 	return github.NewClient(tc)
 }
+
+func IsValidUser(user *github.User) bool {
+	if user == nil {
+		return false
+	}
+
+	return user.ID != nil && user.Login != nil
+}

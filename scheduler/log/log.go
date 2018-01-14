@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	serr "github.com/koki/structurederrors"
+	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -75,4 +76,8 @@ func (l *Logger) PlainErr(err error) {
 
 func (l *Logger) Info(messageFormat string, args ...interface{}) {
 	logrus.Infof(messageFormat, args...)
+}
+
+func GenerateContextID() string {
+	return uuid.Must(uuid.NewV4()).String()
 }

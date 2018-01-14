@@ -1,4 +1,4 @@
-package pipelines
+package pods
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	kc "github.com/koki/ci-lang/scheduler/kubeclient"
 	l "github.com/koki/ci-lang/scheduler/log"
 )
 
@@ -19,7 +20,7 @@ type WorkQueue struct {
 	Informer cache.Controller
 }
 
-func (c *Context) BuildWorkQueue(podWatcher *cache.ListWatch, logger *l.Logger) *WorkQueue {
+func BuildWorkQueue(c *kc.Context, podWatcher *cache.ListWatch, logger *l.Logger) *WorkQueue {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	indexer, informer := cache.NewIndexerInformer(
@@ -57,14 +58,15 @@ func (c *Context) BuildWorkQueue(podWatcher *cache.ListWatch, logger *l.Logger) 
 	}
 }
 
+type Worker func(key string, pod *v1.Pod) error
 type Controller struct {
 	WorkQueue *WorkQueue
 	Worker    Worker
 	Logger    *l.Logger
 }
 
-func (c *Context) BuildController(podWatcher *cache.ListWatch, worker Worker, logger *l.Logger) *Controller {
-	wq := c.BuildWorkQueue(podWatcher, logger)
+func BuildController(c *kc.Context, podWatcher *cache.ListWatch, worker Worker, logger *l.Logger) *Controller {
+	wq := BuildWorkQueue(c, podWatcher, logger)
 	return &Controller{
 		WorkQueue: wq,
 		Worker:    worker,

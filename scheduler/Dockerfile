@@ -3,6 +3,9 @@ ADD . /go/src/github.com/koki/ci-lang/scheduler
 RUN go install github.com/koki/ci-lang/scheduler
 
 FROM ubuntu:16.04
+RUN apt-get update && apt-get install -y \
+  ca-certificates \
+  netbase
 RUN mkdir -p /opt/koki
 ARG BINARY_PATH
 WORKDIR /opt/koki

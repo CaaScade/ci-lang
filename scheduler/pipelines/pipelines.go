@@ -1,59 +1,94 @@
 package pipelines
 
 import (
-	"os"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
-	l "github.com/koki/ci-lang/scheduler/log"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type Context struct {
-	Env          Env
-	Clients      *kubernetes.Clientset
-	ClientConfig *rest.Config
-}
+const PipelineJobLabelKey = "ci-pipeline-component"
+const PipelineJobLabelValue = "pipeline-controller"
 
-type Env struct {
-	MasterURL  string
-	KubeConfig string
-	Namespace  string
-}
-
-// ReadEnv gets the environment variables for the k8s client.
-func ReadEnv() Env {
-	namespace := os.Getenv("NAMESPACE")
-	if len(namespace) == 0 {
-		l.Default.Fatalf("NAMESPACE is missing")
+func PipelineControllerContainer(extraEnv []v1.EnvVar) v1.Container {
+	env := []v1.EnvVar{
+		v1.EnvVar{
+			Name:  "DOCKER_HOST",
+			Value: "http://localhost:2375",
+		},
+		v1.EnvVar{
+			Name:  "CI_WORKSPACE_DIR",
+			Value: "/workspace",
+		},
 	}
-	return Env{
-		MasterURL:  os.Getenv("K8S_MASTER_URL"),
-		KubeConfig: os.Getenv("KUBECONFIG"),
-		Namespace:  namespace,
+	if len(extraEnv) > 0 {
+		env = append(env, extraEnv...)
 	}
-}
-
-func (e Env) BuildContext() *Context {
-	cfg, err := clientcmd.BuildConfigFromFlags(e.MasterURL, e.KubeConfig)
-	if err != nil {
-		l.Default.FatalErr(err, "building k8s config")
-	}
-
-	clientset, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		l.Default.FatalErr(err, "creating k8s client")
-	}
-
-	return &Context{
-		Env:          e,
-		Clients:      clientset,
-		ClientConfig: cfg,
+	return v1.Container{
+		Command:         []string{"ci-lang-exe"},
+		Env:             env,
+		Image:           "ublubu/stackapp",
+		ImagePullPolicy: v1.PullAlways,
+		Name:            "ci-lang",
+		VolumeMounts: []v1.VolumeMount{
+			v1.VolumeMount{
+				MountPath: "/workspace",
+				Name:      "workspace",
+			},
+		},
+		WorkingDir: "/opt/app",
 	}
 }
 
-func (c *Context) Pods() v1.PodInterface {
-	return c.Clients.CoreV1().Pods(c.Env.Namespace)
+func DockerInDockerContainer() v1.Container {
+	privileged := true
+	return v1.Container{
+		Image:           "docker:dind",
+		Name:            "dind",
+		SecurityContext: &v1.SecurityContext{Privileged: &privileged},
+		VolumeMounts: []v1.VolumeMount{
+			v1.VolumeMount{
+				MountPath: "/var/lib/docker",
+				Name:      "docker-graph-storage",
+			},
+			v1.VolumeMount{
+				MountPath: "/workspace",
+				Name:      "workspace",
+			},
+		},
+	}
+}
+
+func PipelineControllerPod(namespace, name string, extraEnv []v1.EnvVar) v1.Pod {
+	pipelineController := PipelineControllerContainer(extraEnv)
+	dind := DockerInDockerContainer()
+	gracePeriod := int64(10)
+	spec := v1.PodSpec{
+		Containers:                    []v1.Container{pipelineController, dind},
+		RestartPolicy:                 v1.RestartPolicyNever,
+		TerminationGracePeriodSeconds: &gracePeriod,
+		Volumes: []v1.Volume{
+			v1.Volume{
+				Name: "docker-graph-storage",
+				VolumeSource: v1.VolumeSource{
+					EmptyDir: &v1.EmptyDirVolumeSource{},
+				},
+			},
+			v1.Volume{
+				Name: "workspace",
+				VolumeSource: v1.VolumeSource{
+					EmptyDir: &v1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+	}
+
+	return v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				PipelineJobLabelKey: PipelineJobLabelValue,
+			},
+		},
+		Spec: spec,
+	}
 }
