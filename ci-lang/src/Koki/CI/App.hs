@@ -9,8 +9,12 @@ module Koki.CI.App
 import           Import
 
 import           Koki.CI.App.Types
+import           Koki.CI.Docker.Types
+import           Koki.CI.Lang
+import qualified Koki.CI.Lang.Git     as G
 import           Koki.CI.Util
 import           Network.HTTP.Client
+import           System.Exit
 
 printRequest :: Request -> IO Request
 printRequest request = do
@@ -43,3 +47,18 @@ printingAppEnv baseURL =
       { managerModifyRequest = printRequest
       , managerModifyResponse = printResponse
       }
+
+getPipeline :: FilePath -> Text -> App Pipeline
+getPipeline workspaceDir repoName = do
+  result <- G.getPipeline workspaceDir repoName
+  case result of
+    Left e         -> throwLang e
+    Right pipeline -> return pipeline
+
+runPipelineJobs :: [ContainerJob] -> App ExitCode
+runPipelineJobs [] = return ExitSuccess
+runPipelineJobs (job:jobs) = do
+  code <- runContainerJob job
+  case code of ExitSuccess -> runPipelineJobs jobs
+               failure     -> return failure
+

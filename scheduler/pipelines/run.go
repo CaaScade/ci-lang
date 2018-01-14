@@ -55,24 +55,42 @@ func (c *Context) RunPipeline(pod *v1.Pod, logger *l.Logger) bool {
 	return podSuccess
 }
 
-func (c *Context) BuildPipelinePod(pipelineID string) v1.Pod {
+func (c *Context) BuildPipelinePod(pipelineID string, repoName, repoURL, sha string) v1.Pod {
 	name := fmt.Sprintf("pipeline-%s", pipelineID)
-	return PipelineControllerPod(c.Env.Namespace, name)
+	gitEnv := []v1.EnvVar{
+		v1.EnvVar{
+			Name:  "GIT_REPO_NAME",
+			Value: repoName,
+		},
+		v1.EnvVar{
+			Name:  "GIT_REPO_URL",
+			Value: repoURL,
+		},
+		v1.EnvVar{
+			Name:  "GIT_REVISION",
+			Value: sha,
+		},
+	}
+	return PipelineControllerPod(c.Env.Namespace, name, gitEnv)
 }
 
-func PipelineControllerContainer() v1.Container {
-	return v1.Container{
-		Command: []string{"ci-lang-exe"},
-		Env: []v1.EnvVar{
-			v1.EnvVar{
-				Name:  "DOCKER_HOST",
-				Value: "http://localhost:2375",
-			},
-			v1.EnvVar{
-				Name:  "CI_WORKSPACE_DIR",
-				Value: "/workspace",
-			},
+func PipelineControllerContainer(extraEnv []v1.EnvVar) v1.Container {
+	env := []v1.EnvVar{
+		v1.EnvVar{
+			Name:  "DOCKER_HOST",
+			Value: "http://localhost:2375",
 		},
+		v1.EnvVar{
+			Name:  "CI_WORKSPACE_DIR",
+			Value: "/workspace",
+		},
+	}
+	if len(extraEnv) > 0 {
+		env = append(env, extraEnv...)
+	}
+	return v1.Container{
+		Command:         []string{"ci-lang-exe"},
+		Env:             env,
 		Image:           "ublubu/stackapp",
 		ImagePullPolicy: v1.PullAlways,
 		Name:            "ci-lang",
@@ -97,12 +115,16 @@ func DockerInDockerContainer() v1.Container {
 				MountPath: "/var/lib/docker",
 				Name:      "docker-graph-storage",
 			},
+			v1.VolumeMount{
+				MountPath: "/workspace",
+				Name:      "workspace",
+			},
 		},
 	}
 }
 
-func PipelineControllerPod(namespace, name string) v1.Pod {
-	pipelineController := PipelineControllerContainer()
+func PipelineControllerPod(namespace, name string, extraEnv []v1.EnvVar) v1.Pod {
+	pipelineController := PipelineControllerContainer(extraEnv)
 	dind := DockerInDockerContainer()
 	gracePeriod := int64(10)
 	spec := v1.PodSpec{

@@ -20,6 +20,7 @@ synopsis:            Short description of your package
 description:         Please see the README on Github at <https://github.com/caascade/ci-lang#readme>
 
 dependencies:
+- aeson
 - async
 - base >= 4.7 && < 5
 - bytestring
@@ -43,6 +44,7 @@ dependencies:
 - unix
 - unordered-containers
 - vector
+- yaml
 
 library:
   source-dirs: src

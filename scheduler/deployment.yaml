@@ -18,4 +18,5 @@ deployment:
     - 8080
     env:
     - GITHUB_WEBHOOK_SECRET=${env.github_webhook_secret}
+    - GITHUB_USER_ACCESS_TOKEN=${env.github_user_access_token}
     - NAMESPACE=default

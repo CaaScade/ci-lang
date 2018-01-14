@@ -49,6 +49,8 @@ newtype Directory = Directory { unDirectory :: FilePath } deriving (Show, Eq)
 
 -- | Typeclass for running jobs in Docker.
 class Monad m => DockerJobClient m where
+  -- | Returns 'ExitCode' rather than throwing error because the job still ran.
+  -- The 'ExitCode' is a legitimate result that we care about.
   runContainerJob :: ContainerJob -> m ExitCode
   untilDockerAvailable :: m ()
   -- TODO: Add members for setting up inputs and retrieving outputs

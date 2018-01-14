@@ -7,73 +7,75 @@ import           Import
 
 import           Koki.CI.App
 import           Koki.CI.Docker.Types
+import           Koki.CI.Lang
+import           Koki.CI.Lang.Git     (GitRepo (..), GitRevision (..), cloneJob,
+                                       prepareWorkspaceJob)
 import           Koki.CI.Util
 import           System.Directory     (createDirectoryIfMissing)
 import           System.Environment   (lookupEnv)
-import           System.FilePath      ((</>))
+import           System.Exit
 
 main :: IO ()
 main = do
   putStrLn "hello from Haskell"
   dockerMain
 
-dockerMain :: IO ()
-dockerMain = do
+getDockerURL :: IO Text
+getDockerURL = do
   mDockerURL <- lookupEnv "DOCKER_HOST"
   let dockerURL = maybe "http://localhost:2375" pack mDockerURL
   putFlush $ "DOCKER_HOST=" <> dockerURL
+  return dockerURL
+
+getWorkspaceDir :: IO FilePath
+getWorkspaceDir = do
   mWorkspaceDir <- lookupEnv "CI_WORKSPACE_DIR"
   let workspaceDir = fromMaybe "/home/kynan/workspace/ci-lang/ci-workspace" mWorkspaceDir
-      env = printingAppEnv $ DockerBaseURL dockerURL
   createDirectoryIfMissing True workspaceDir
-  printFlush =<< runApp env (script workspaceDir)
+  return workspaceDir
 
-script :: FilePath -> App ()
-script workspaceDir = do
+getEnv :: String -> ExceptT String IO String
+getEnv var = ExceptT $ do
+  mVal <- lookupEnv var
+  case mVal of Nothing -> return (Left $ "no " <> var)
+               Just val -> return (Right val)
+
+getGitInfo :: IO (GitRepo, GitRevision)
+getGitInfo = do
+  let action = do
+        repoName <- getEnv "GIT_REPO_NAME"
+        repoURL <- getEnv "GIT_REPO_URL"
+        revision <- getEnv "GIT_REVISION"
+        let repo = GitRepo {_repoName = pack repoName, _repoURL = pack repoURL}
+        return (repo, GitRevision $ pack revision)
+  result <- runExceptT action
+  case result of
+    Left e -> printFlush e >> exitFailure
+    Right x -> return x
+
+dockerMain :: IO ()
+dockerMain = do
+  dockerURL <- getDockerURL
+  workspaceDir <- getWorkspaceDir
+  (repo, revision) <- getGitInfo
+  let env = printingAppEnv $ DockerBaseURL dockerURL
+  result <- runApp env (script workspaceDir repo revision)
+  case result of
+    Left e   -> printFlush e >> exitFailure
+    Right () -> return ()
+
+script :: FilePath -> GitRepo -> GitRevision -> App ()
+script workspaceDir gitRepo gitRevision = do
   untilDockerAvailable
-  printFlush =<< runContainerJob prepareWorkspaceJob
-  printFlush =<< runContainerJob cloneJob
-  printFlush =<< runContainerJob buildJob
-  where
-    prepareWorkspaceJob =
-      ContainerJob
-      { _cjImageName = "alpine"
-      , _cjImageTag = ImageTag "latest"
-      , _cjName = Nothing
-      , _cjWorkspace =
-          Workspace
-          { _wHostDir = Directory workspaceDir
-          , _wJobDir = Directory "/workspace"
-          }
-      , _cjCommands = [ "rm -rf *" ]
-      , _cjTimeout = responseTimeoutDefault
-      }
-    cloneJob =
-      ContainerJob
-      { _cjImageName = "alpine/git"
-      , _cjImageTag = ImageTag "latest"
-      , _cjName = Nothing
-      , _cjWorkspace =
-          Workspace
-          { _wHostDir = Directory workspaceDir
-          , _wJobDir = Directory "/workspace"
-          }
-      , _cjCommands = [ "git clone https://github.com/koki/short.git"]
-      , _cjTimeout = responseTimeoutMinutes 1
-      }
-    buildJob =
-      ContainerJob
-      { _cjImageName = "golang"
-      , _cjImageTag = ImageTag "latest"
-      , _cjName = Nothing
-      , _cjWorkspace =
-          Workspace
-          { _wHostDir = Directory $ workspaceDir </> "short"
-          , _wJobDir = Directory "/go/src/github.com/koki/short"
-          }
-      , _cjCommands = [ "./scripts/test.sh", "./scripts/build.sh" ]
-      , _cjTimeout = responseTimeoutMinutes 5
-      }
+  let prepare = prepareWorkspaceJob workspaceDir
+      clone = cloneJob workspaceDir gitRepo gitRevision
+  prepResult <- runContainerJob prepare
+  when (prepResult /= ExitSuccess) $ throwSimple "prepare step exit failure"
+  cloneResult <- runContainerJob clone
+  when (cloneResult /= ExitSuccess) $ throwSimple "clone step exit failure"
+  jobs <- convertPipeline workspaceDir <$> getPipeline workspaceDir (_repoName gitRepo)
+  pipelineResult <- runPipelineJobs jobs
+  when (pipelineResult /= ExitSuccess) $ throwSimple "pipeline exit failure"
 
 printloop :: IO ()
 printloop = do

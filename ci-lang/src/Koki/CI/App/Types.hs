@@ -11,6 +11,7 @@ import           Import
 import qualified Docker.Client        as D
 import qualified Koki.CI.Docker       as KD
 import           Koki.CI.Docker.Types
+import           Koki.CI.Lang         (ParseException (..))
 import           Network.HTTP.Client
 
 newtype DockerBaseURL = DockerBaseURL Text deriving Show
@@ -24,6 +25,7 @@ data AppEnv = AppEnv
 
 data AppError
   = DockerError D.DockerError
+  | LangError ParseException
   | SimpleError Text
   deriving (Show)
 
@@ -75,3 +77,9 @@ _aeDockerOpts env =
 
 runApp :: AppEnv -> App a -> IO (Either AppError a)
 runApp env action = runExceptT $ runReaderT (unApp action) env
+
+throwSimple :: Text -> App a
+throwSimple = App . throwError . SimpleError
+
+throwLang :: ParseException -> App a
+throwLang = App . throwError . LangError

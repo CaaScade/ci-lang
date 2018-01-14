@@ -86,7 +86,9 @@ func (c *Config) HandlePullEvent(event *github.PullRequestEvent, requestID strin
 	client := gc.ClientWithToken(c.UserAccessToken)
 	SetGitHubStatus(client, repo, sha, "pending", logger)
 
-	pod := c.PipelinesContext.BuildPipelinePod(requestID)
+	repoURL := util.FromStringPtr(repo.CloneURL)
+	repoName := util.FromStringPtr(repo.Name)
+	pod := c.PipelinesContext.BuildPipelinePod(requestID, repoName, repoURL, sha)
 	success := c.PipelinesContext.RunPipeline(&pod, logger)
 
 	if success {
