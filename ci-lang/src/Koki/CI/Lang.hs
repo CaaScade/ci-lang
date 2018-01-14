@@ -23,14 +23,14 @@ In its first iteration, the CI language allows us to define a sequence of contai
 - image: alpine
   tag: latest
   name: prepare-workspace
-  hostDir: /workspace
+  sharedDir: /workspace
   jobDir: /workspace
   commands:
   - "rm -rf *"
 - image: alpine/git
   tag: latest
   name: git-clone
-  hostDir: /workspace
+  sharedDir: /workspace
   jobDir: /workspace
   commands:
   - "git clone https://github.com/koki/short.git"
@@ -38,7 +38,7 @@ In its first iteration, the CI language allows us to define a sequence of contai
 - image: golang
   tag: latest
   name: test-and-build
-  hostDir: /workspace/short
+  sharedDir: /workspace/short
   jobDir: /go/src/github.com/koki/short
   commands:
   - "./scripts/test.sh"
@@ -52,7 +52,7 @@ data Pipe = Pipe
   { image    :: Text
   , tag      :: Text
   , name     :: Maybe Text
-  , hostDir  :: Text
+  , sharedDir  :: Text
   , jobDir   :: Text
   , commands :: [Text]
   , timeout  :: Maybe Int
@@ -70,7 +70,7 @@ convertPipe workspaceDir Pipe {..} =
   , _cjName = name
   , _cjWorkspace =
       Workspace
-      { _wHostDir = Directory $ workspaceDir </> unpack hostDir
+      { _wHostDir = Directory $ workspaceDir </> unpack sharedDir
       , _wJobDir = Directory $ workspaceDir </> unpack jobDir
       }
   , _cjCommands = commands
