@@ -1,0 +1,24 @@
+imports:
+- env: ./env.yaml
+deployment:
+  name: pipeline-scheduler
+  labels:
+    app: pipeline-scheduler
+  replicas: 1
+  selector:
+    app: pipeline-scheduler
+  affinity:
+  - anti_pod: app=pipeline-scheduler
+    topology: kubernetes.io/hostname
+  containers:
+  - image: ublubu/dummyscheduler
+    name: scheduler
+    pull: always
+    expose:
+    - 8080
+    env:
+    - GITHUB_CLIENT_SECRET=${env.github_client_secret}
+    - GITHUB_CLIENT_ID=${env.github_client_id}
+    - COOKIE_AUTH_KEY=${env.cookie_auth_key}
+    - CI_BASE_URL=${env.ci_base_url}
+    - NAMESPACE=${env.namespace}

@@ -1,0 +1,33 @@
+pod:
+  name: pipeline-controller
+  containers:
+  - name: ci-lang
+    image: ublubu/stackapp
+    wd: /opt/app
+    command:
+    - ci-lang-exe
+    env:
+    - DOCKER_HOST=http://localhost:2375
+    - CI_WORKSPACE_DIR=/workspace
+    - GIT_REPO_URL=https://github.com/ublubu/webhook-test
+    - GIT_REPO_NAME=webhook-test
+    - GIT_REVISION=ci-test
+    pull: always
+    volume:
+    - mount: /workspace
+      store: workspace
+  - name: dind
+    image: docker:dind
+    privileged: true
+    volume:
+    - mount: /var/lib/docker
+      store: docker-graph-storage
+    - mount: /workspace
+      store: workspace
+  restart_policy: never
+  termination_grace_period: 10
+  volumes:
+    docker-graph-storage:
+      vol_type: empty_dir
+    workspace:
+      vol_type: empty_dir

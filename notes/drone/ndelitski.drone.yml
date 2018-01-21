@@ -1,0 +1,89 @@
+# https://gist.github.com/ndelitski/a314e090d6615f10884d
+
+# This file may be outdated (2yr old)
+
+clone:
+  path: github.com/gogits/gogs
+
+# The commands start in the workspace directory.
+# The `Filesystem` type should represent that workspace directory.
+# But it's probably possible for the commands to escape to the parent dir.
+build:
+  image: golang:$$GO_VERSION
+
+  environment:
+    - TAGS="pam sqlite"
+
+    - BUILD_OS="windows linux darwin freebsd openbsd netbsd"
+    - BUILD_ARCH="386 amd64 arm"
+
+  commands:
+    - "apt-get update"
+    - "apt-get install -y libpam-dev zip"
+
+    - "make deps"
+    - "make get"
+    - "make generate"
+    - "make build"
+
+    # Required until multi build section of drone
+    - "[ \"$$GO_VERSION\" = \"1.5\" ] && make release"
+
+publish:
+  github_release:
+    api_key: $$GITHUB_TOKEN
+    files:
+      - release/*.tar.gz
+      - release/*.zip
+    when:
+      repo: gogits/gogs
+      event: tag
+      matrix:
+        GO_VERSION: 1.5
+
+  docker:
+    username: $$DOCKER_USERNAME
+    password: $$DOCKER_PASSWORD
+    email: $$DOCKER_EMAIL
+    repo: gogs/gogs
+    tag: $${TAG##v}
+    when:
+      repo: gogits/gogs
+      event: tag
+      matrix:
+        GO_VERSION: 1.5
+
+  docker:
+    username: $$DOCKER_USERNAME
+    password: $$DOCKER_PASSWORD
+    email: $$DOCKER_EMAIL
+    repo: gogs/gogs
+    tag: $${BRANCH/master/latest}
+    when:
+      repo: gogits/gogs
+      branch: [develop, master]
+      matrix:
+        GO_VERSION: 1.5
+
+notify:
+  gitter:
+    webhook: https://webhooks.gitter.im/e/c52d2013f36e28b35f71
+    when:
+      repo: gogits/gogs
+
+  email:
+    host: $$EMAIL_HOST
+    port: $$EMAIL_PORT
+    username: $$EMAIL_USERNAME
+    password: $$EMAIL_PASSWORD
+    from: drone@gogs.io
+    recipients:
+      - u@gogs.io
+    when:
+      repo: gogits/gogs
+
+matrix:
+  GO_VERSION:
+    - 1.3
+    - 1.4
+    - 1.5

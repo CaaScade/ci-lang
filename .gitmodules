@@ -1,0 +1,3 @@
+[submodule "lib/docker-hs"]
+	path = ci-lang/lib/docker-hs
+	url = git@github.com:ublubu/docker-hs.git

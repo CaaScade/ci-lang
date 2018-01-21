@@ -1,0 +1,15 @@
+package: github.com/koki/ci-lang/scheduler
+import:
+- package: github.com/google/go-github
+  subpackages:
+  - github
+- package: github.com/koki/json
+- package: github.com/koki/structurederrors
+- package: github.com/sirupsen/logrus
+- package: k8s.io/client-go
+  version: 78700dec6369ba22221b72770783300f143df150
+  subpackages:
+  - kubernetes
+- package: golang.org/x/oauth2
+- package: github.com/gorilla/sessions
+  version: v1.1
